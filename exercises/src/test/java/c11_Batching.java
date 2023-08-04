@@ -28,10 +28,7 @@ public class c11_Batching extends BatchingBase {
      */
     @Test
     public void batch_writer() {
-        //todo do your changes here
-        Flux<Void> dataStream = null;
-        dataStream();
-        writeToDisk(null);
+        Flux<Void> dataStream = dataStream().buffer(10).concatMap(this::writeToDisk);
 
         //do not change the code below
         StepVerifier.create(dataStream)
@@ -49,10 +46,9 @@ public class c11_Batching extends BatchingBase {
      */
     @Test
     public void command_gateway() {
-        //todo: implement your changes here
-        Flux<Void> processCommands = null;
-        inputCommandStream();
-        sendCommand(null);
+        Flux<Void> processCommands = inputCommandStream()
+                .groupBy(Command::getAggregateId)
+                .flatMap(g -> g.concatMap(this::sendCommand));
 
         //do not change the code below
         Duration duration = StepVerifier.create(processCommands)
@@ -69,7 +65,9 @@ public class c11_Batching extends BatchingBase {
     @Test
     public void sum_over_time() {
         Flux<Long> metrics = metrics()
-                //todo: implement your changes here
+                .window(Duration.ofSeconds(1))
+                .flatMap(window -> window.reduce(Long::sum))
+                .doOnNext(sum -> System.out.println("sum last second: " + sum))
                 .take(10);
 
         StepVerifier.create(metrics)
